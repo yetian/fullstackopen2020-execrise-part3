@@ -17,14 +17,6 @@ app.use(express.static('build'))
 
 const PersonDBService = require('./model/persons')
 
-let persons = [
-  {
-    name: 'test',
-    number: '123-456-789',
-    id: 1
-  }
-]
-
 const API_PREFIX = '/api'
 
 app.get('/', (req, res) => {
@@ -34,19 +26,21 @@ app.get('/', (req, res) => {
 app.get(`${API_PREFIX}/persons`, (req, res) => {
   PersonDBService.find({}).then(persons => {
     res.json(persons)
-  })
+  }).catch(err => next(err))
 })
 
-app.get(`${API_PREFIX}/persons/:id`, (req, res) => {
-  const id = Number(req.params.id)
-  let foundPerson = persons.find(p => p.id === id)
-  if (foundPerson) {
-    res.json(foundPerson)
-  }
-  res.status(404).end()
+app.get(`${API_PREFIX}/persons/:id`, (req, res, next) => {
+  const id = req.params.id
+  PersonDBService.findById(id).then(person => {
+    if (person) {
+      res.json(person)
+    } else {
+      res.status(404).end()
+    }
+  }).catch(err => next(err))
 })
 
-app.post(`${API_PREFIX}/persons`, (req, res) => {
+app.post(`${API_PREFIX}/persons`, async (req, res, next) => {
   const person = req.body
   if (person === undefined) {
     res.statusMessage = 'Person is undefined'
@@ -56,6 +50,7 @@ app.post(`${API_PREFIX}/persons`, (req, res) => {
       res.statusMessage = 'name and number are requested'
       res.status(400).end()
     } else {
+      const persons = await PersonDBService.find({})
       if (persons.find(p => p.name.toLowerCase() === person.name.toLowerCase())) {
         res.statusMessage = `${person.name} exists`
         res.status(400).end()
@@ -67,29 +62,47 @@ app.post(`${API_PREFIX}/persons`, (req, res) => {
 
         p.save().then(savedPerson => {
           res.json(savedPerson)
-        })
+        }).catch(err => next(err))
       }
     }
   }
 })
 
-app.delete(`${API_PREFIX}/persons/:id`, (req, res) => {
-  const id = Number(req.params.id)
-  let foundPerson = persons.find(p => p.id === id)
-  if (foundPerson) {
-    persons = persons.filter(p => p.id !== id)
-    res.status(204).end()
+app.put(`${API_PREFIX}/persons/:id`, (req, res, next) => {
+  const id = req.params.id
+  const person = req.body
+
+  if (person === undefined) {
+    res.statusMessage = 'Person is undefined'
+    res.status(400).end()
+  } else {
+    if (person.name === undefined || person.number === undefined) {
+      res.statusMessage = 'name and number are requested'
+      res.status(400).end()
+    } else {
+      PersonDBService.findByIdAndUpdate(id, person, {new: true}).then(updatedPerson => {
+        res.json(updatedPerson)
+      }).catch(err => next(err))
+    }
   }
-  res.status(404).end()
+})
+
+app.delete(`${API_PREFIX}/persons/:id`, (req, res, next) => {
+  const id = req.params.id
+  PersonDBService.findByIdAndDelete(id).then(result => {
+    res.status(204).end()
+  }).catch(err => next(err))
 })
 
 app.get(`/info`, (req, res) => {
   const receivedDate = new Date()
 
-  res.send(`
-    <p> Phonebook has info for ${persons.length} people </p>
-    <p> ${receivedDate} </p>
-  `)
+  PersonDBService.find({}).then(persons => {
+    res.send(`
+      <p> Phonebook has info for ${persons.length} people </p>
+      <p> ${receivedDate} </p>
+    `)
+  }).catch(err => next(err))  
 })
 
 const PORT = process.env.PORT
