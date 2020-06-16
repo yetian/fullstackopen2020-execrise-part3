@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
   res.send('<h1> It Works! </h1>')
 })
 
-app.get(`${API_PREFIX}/persons`, (req, res) => {
+app.get(`${API_PREFIX}/persons`, (req, res, next) => {
   PersonDBService.find({}).then(persons => {
     res.json(persons)
   }).catch(err => next(err))
@@ -80,7 +80,7 @@ app.put(`${API_PREFIX}/persons/:id`, (req, res, next) => {
       res.statusMessage = 'name and number are requested'
       res.status(400).end()
     } else {
-      PersonDBService.findByIdAndUpdate(id, person, {new: true}).then(updatedPerson => {
+      PersonDBService.findByIdAndUpdate(id, person, { new: true }).then(updatedPerson => {
         res.json(updatedPerson)
       }).catch(err => next(err))
     }
@@ -89,12 +89,12 @@ app.put(`${API_PREFIX}/persons/:id`, (req, res, next) => {
 
 app.delete(`${API_PREFIX}/persons/:id`, (req, res, next) => {
   const id = req.params.id
-  PersonDBService.findByIdAndDelete(id).then(result => {
+  PersonDBService.findByIdAndDelete(id).then(() => {
     res.status(204).end()
   }).catch(err => next(err))
 })
 
-app.get(`/info`, (req, res) => {
+app.get('/info', (req, res, next) => {
   const receivedDate = new Date()
 
   PersonDBService.find({}).then(persons => {
@@ -102,7 +102,7 @@ app.get(`/info`, (req, res) => {
       <p> Phonebook has info for ${persons.length} people </p>
       <p> ${receivedDate} </p>
     `)
-  }).catch(err => next(err))  
+  }).catch(err => next(err))
 })
 
 const PORT = process.env.PORT
