@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const express = require('express')
 const app = express()
 const bodyPaser = require('body-parser')
@@ -12,6 +14,8 @@ const cors = require('cors')
 app.use(cors())
 
 app.use(express.static('build'))
+
+const PersonDBService = require('./model/persons')
 
 let persons = [
   {
@@ -28,7 +32,9 @@ app.get('/', (req, res) => {
 })
 
 app.get(`${API_PREFIX}/persons`, (req, res) => {
-  res.json(persons)
+  PersonDBService.find({}).then(persons => {
+    res.json(persons)
+  })
 })
 
 app.get(`${API_PREFIX}/persons/:id`, (req, res) => {
@@ -54,14 +60,14 @@ app.post(`${API_PREFIX}/persons`, (req, res) => {
         res.statusMessage = `${person.name} exists`
         res.status(400).end()
       } else {
-        let id = 1
-        if (persons.length > 0) {
-          id = Math.max(...persons.map(p => p.id))
-          id = id + 1
-        }
-        person.id = id
-        persons.push(person)
-        res.json(person)
+        const p = new PersonDBService({
+          name: person.name,
+          number: person.number
+        })
+
+        p.save().then(savedPerson => {
+          res.json(savedPerson)
+        })
       }
     }
   }
@@ -86,7 +92,7 @@ app.get(`/info`, (req, res) => {
   `)
 })
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server is running on part ${PORT}`)
 })
